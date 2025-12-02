@@ -35,3 +35,6 @@ python-dotenv
 
 # --- Database driver ---
 psycopg2-binary>=2.9.9   # version compatible with Python 3.12
+opencv-python-headless
+cv2
+opencv-python
