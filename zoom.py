@@ -1,21 +1,22 @@
 import math
 from PIL import Image
-# cat_image = '/home/andrzej/code/andrzejdambski/Projet_colorisation/2/CAT_00/00000001_005.jpg'
-# file_cat = '/home/andrzej/code/andrzejdambski/Projet_colorisation/2/CAT_00/00000001_005.jpg.cat'
 
 def zoom_on_cat_face(cat_image,file_cat,data_augmentation=False):
 
     """Takes the file paths for a .jpg and the .cat associated,
     scales, rotates and crops the image to a 64x64 image of a centered cat's head.
     The output is a Image.PIL
+    Data augmentation can be implemented in this function
 
-    Input: cat_image : file path to the .jpg of a cat
+    Args:   cat_image : file path to the .jpg of a cat
             file_cat : file path to the .cat associated
+            data_augmentation : Wether we do data augmentation or not
     Returns:
         Image.PIL: 64x64 image of a centered cat's head
     """    
     cat_image = Image.open(cat_image)
     cat_cat = open(file_cat,'r')
+    cat_cat.seek(0)
     cat_cat.seek(0)
     cat_cat = cat_cat.read()
     cat_leye = cat_cat.split()[1:3]
@@ -29,6 +30,8 @@ def zoom_on_cat_face(cat_image,file_cat,data_augmentation=False):
     #scale
     distance_eyes = math.sqrt((cat_reye[1]-cat_leye[1])**2+(cat_reye[0]-cat_leye[0])**2)
     distance_output = 64 - 2*leye_loc[0]
+    if distance_output == 0:
+        return None
     scale = distance_eyes/distance_output
     a = scale
     b = 0
@@ -44,6 +47,8 @@ def zoom_on_cat_face(cat_image,file_cat,data_augmentation=False):
         sign = 1
     else:
         sign = -1
+    if (cat_reye[0]-cat_leye[0]) == 0:
+        return None
     rotation = math.atan((cat_reye[1]-cat_leye[1])/(cat_reye[0]-cat_leye[0]))*(180/math.pi)
     
     new_leye_center = (cat_image.size[0]/2 - 1/scale*(cat_image.size[0]/2 - cat_leye[0]),cat_image.size[1]/2 - 1/scale*(cat_image.size[1]/2 - cat_leye[1]))
