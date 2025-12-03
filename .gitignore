@@ -1,6 +1,6 @@
 raw_data/
 not_to_git_push/
-ipynb/
+*.ipynb
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
