@@ -35,6 +35,7 @@ pip-delete-this-directory.txt
 .pytest_cache/
 # Jupyter Notebook
 .ipynb_checkpoints
+*.ipynb
 # IPython
 profile_default/
 ipython_config.py
