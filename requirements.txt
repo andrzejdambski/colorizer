@@ -26,7 +26,7 @@ db-dtypes
 # --- TensorFlow (auto-detect by platform) ---
 tensorflow-macos>=2.15.0; sys_platform == 'darwin' and 'ARM' in platform_version   # Apple Silicon Macs
 tensorflow>=2.15.0; sys_platform == 'darwin' and 'ARM' not in platform_version     # Intel Macs
-tensorflow>=2.15.0; sys_platform != 'darwin'                                       # Windows & Linux
+tensorflow>=2.15.0; sys_platform != 'darwin'                                      # Windows & Linux
 
 # --- MLOps & workflow tools ---
 mlflow>=2.11.0          # 2.1.1 too old for Python 3.12
@@ -35,3 +35,13 @@ python-dotenv
 
 # --- Database driver ---
 psycopg2-binary>=2.9.9   # version compatible with Python 3.12
+
+# --- Image processing ---
+pillow
+scikit-image
+opencv-python-headless # opencv-python-headless plutôt que opencv-python pour éviter les problèmes de GUI dans Docker.
+
+# --- API Colorizer ---
+fastapi
+uvicorn[standard] # [standard] --> recommandé officiellement par FastApi (plus de performance et possibilités)
+python-multipart  # upload de fichiers dans FastAPI
