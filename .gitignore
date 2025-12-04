@@ -1,6 +1,6 @@
 raw_data/
 not_to_git_push/
-ipynb/
+*.ipynb
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -38,6 +38,7 @@ pip-delete-this-directory.txt
 # Jupyter Notebook
 *.ipynb
 .ipynb_checkpoints
+*.ipynb
 # IPython
 profile_default/
 ipython_config.py
