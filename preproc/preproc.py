@@ -6,6 +6,24 @@ from skimage import color
 import tensorflow as tf
 from pathlib import Path
 
+
+def get_list_of_paths(path_to_data):
+    '''
+    Returns a tuple, two lists. The first is a list with file names of jpg files
+    The other is a list with file names of .cat files
+    You need to have cats folder in your directory
+    '''
+
+    p = Path(path_to_data)
+    jpgs = sorted(list(p.glob('**/*.jpg')))
+    cats = sorted(list(p.glob('**/*.cat')))
+
+    # Convert PosixPath objects to strings
+    jpgs = [str(p) for p in jpgs]
+    cats = [str(c) for c in cats]
+
+    return jpgs, cats
+
 def zoom_on_cat_face(jpg_path, cat_path, image_size=64, data_augmentation=False):
     """
     Takes the file paths for a .jpg and the .cat associated,
@@ -68,28 +86,11 @@ def zoom_on_cat_face(jpg_path, cat_path, image_size=64, data_augmentation=False)
 
     return np.array(cat_c, dtype=np.uint8)
 
-def get_list_of_paths():
-    '''
-    Returns a tuple, two lists. The first is a list with file names of jpg files
-    The other is a list with file names of .cat files
-    You need to have cats folder in your directory
-    '''
-
-    p = Path('Cats')
-    jpgs = sorted(list(p.glob('**/*.jpg')))
-    cats = sorted(list(p.glob('**/*.cat')))
-
-    # Convert PosixPath objects to strings
-    jpgs = [str(p) for p in jpgs]
-    cats = [str(c) for c in cats]
-
-    return jpgs, cats
-
-def visualising_an_image(cat_number):
+def visualising_an_image(cat_number,path_to_data):
     '''
     cat_number est un numero de chat, changer le pour visualiser un chat diff
     '''
-    jpg, cat = get_list_of_paths()
+    jpg, cat = get_list_of_paths(path_to_data)
     cat_image = Path(jpg[cat_number])
     file_cat = Path(cat[cat_number])
     image = zoom_on_cat_face(cat_image,file_cat,128)
@@ -147,8 +148,8 @@ def preprocess(jpg_path, cat_path):
 
     return L_norm, AB_norm
 
-def get_dataset(batch_number):
-    liste_de_jpgs, liste_de_cat = get_list_of_paths()
+def get_dataset(batch_number,path_to_data):
+    liste_de_jpgs, liste_de_cat = get_list_of_paths(path_to_data)
     ds = tf.data.Dataset.from_tensor_slices((liste_de_jpgs,liste_de_cat))
     dataset = ds.map(preprocess, num_parallel_calls=tf.data.AUTOTUNE).batch(batch_number).prefetch(tf.data.AUTOTUNE)
     return dataset
