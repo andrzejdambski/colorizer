@@ -5,7 +5,7 @@ from PIL import Image
 import io
 import numpy as np
 
-def getting_file_names():
+def getting_file_names(file_type='jpg'):
     '''
     cette fonction recupere le nom des fichiers dans le bucket
     Requiere le package:
@@ -19,7 +19,7 @@ def getting_file_names():
     file_names = []
 
     for blob in bucket.list_blobs():
-        if blob.name.endswith('.jpg'):
+        if blob.name.endswith(f'.{file_type}'):
             file_names.append(blob.name)
 
     return file_names
