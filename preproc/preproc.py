@@ -35,13 +35,21 @@ def zoom_on_cat_face(jpg_path, cat_path, image_size=64, data_augmentation=False)
         jpg_path = jpg_path.numpy().decode()
     if isinstance(cat_path, tf.Tensor):
         cat_path = cat_path.numpy().decode()
-
+    
     # --- Load image as PIL (safe in eager) ---
-    img_pil = Image.open(jpg_path).convert("RGB")
-
+    with tf.io.gfile.GFile(jpg_path, "rb") as f:
+        img_pil = Image.open(f).convert("RGB")
+        
     # --- Load .cat file as string ---
-    with open(cat_path, "r") as f:
+    with tf.io.gfile.GFile(cat_path, "r") as f:
         cat_cat = f.read()
+        
+    # # --- Load image as PIL (safe in eager) ---
+    # img_pil = Image.open(jpg_path).convert("RGB")
+
+    # # --- Load .cat file as string ---
+    # with open(cat_path, "r") as f:
+    #     cat_cat = f.read()
 
     # --- Parse eyes coordinates ---
     cat_leye = [int(x) for x in cat_cat.split()[1:3]]
