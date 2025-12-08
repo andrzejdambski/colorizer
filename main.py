@@ -61,7 +61,7 @@ checkpoint = tf.train.Checkpoint(generator_optimizer=generator_optimizer,
                                  generator=generator,
                                  discriminator=discriminator)
 
-epochs = 1
+epochs = 10
 fit(train_ds,epochs,discriminator,generator_optimizer,discriminator_optimizer,checkpoint,checkpoint_prefix)
 
 model_filename = 'model_trained.keras'    
