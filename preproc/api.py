@@ -14,7 +14,6 @@ def getting_file_names(file_type='jpg'):
     Returns un fichier avec les file names en jpg
     '''
     client = storage.Client()
-    # bucket = client.bucket("colorizer")
     bucket = client.bucket("catsdata")
 
     file_names = []
