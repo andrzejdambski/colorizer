@@ -15,7 +15,7 @@ def getting_file_names(file_type='jpg'):
     '''
     client = storage.Client()
     # bucket = client.bucket("colorizer")
-    bucket = client.bucket("nina-cats-data")
+    bucket = client.bucket("catsdata")
 
     file_names = []
 

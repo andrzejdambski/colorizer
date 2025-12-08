@@ -10,11 +10,11 @@ from preproc.preproc import get_dataset, get_list_of_paths, preprocess
 import time
 from keras import Sequential,Input,layers
 from keras.callbacks import EarlyStopping
-from model.model import Generator, mae, train
+from model.model import Generator, Discriminator, mae, train
 import math
 
 # url = 'gs://colorizer/'
-url = 'gs://nina-cats-data/'
+url = 'gs://catsdata/'
 
 l_jpg = getting_file_names()
 # l_cat = getting_file_names('cat')
@@ -39,8 +39,21 @@ image_size = 256
 generator = Generator(image_size)
 print(f'\n ✅ generator done')
 
-
 generator.compile(loss=mae,optimizer='adam')
+
+discriminator = Discriminator()
+print(f'\n ✅ discriminator done')
+
+generator_optimizer = tf.keras.optimizers.Adam(2e-4, beta_1=0.5)
+discriminator_optimizer = tf.keras.optimizers.Adam(2e-4, beta_1=0.5)
+
+checkpoint_dir = './training_checkpoints'
+checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
+checkpoint = tf.train.Checkpoint(generator_optimizer=generator_optimizer,
+                                 discriminator_optimizer=discriminator_optimizer,
+                                 generator=generator,
+                                 discriminator=discriminator)
+
 
 history = train(generator,train_ds,test_ds)
 
