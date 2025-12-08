@@ -39,7 +39,7 @@ generator.compile(loss=mae,optimizer='adam')
 history = train(generator,train_ds,test_ds)
 
 save_dir = '/opt/colorizer/'
-save_dir_1 = ''
-path = os.path.join(save_dir_1, f"model_epoch_{epoch + 1}.keras")
+save_dir_1 = '/model_trained/'
+path = os.path.join(save_dir_1, f"model_final.keras")
 history.save(path)
 print(f"✅ Modèle sauvegardé : {path}")
