@@ -4,6 +4,7 @@ from keras import Sequential,Input,layers
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 import math
 import time
+from google.cloud import storage
 
 
 def downsample(filter,kernel_size,apply_batchnorm=True):
@@ -147,10 +148,12 @@ def discriminator_loss(disc_real_output, disc_generated_output):
 def train_step(input_image, target, step,discriminator,generator_optimizer,discriminator_optimizer):
   with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
     gen_output = generator(input_image, training=True)
+    print('Genarator trained')
 
     disc_real_output = discriminator([input_image, target], training=True)
     disc_generated_output = discriminator([input_image, gen_output], training=True)
-
+    print('Discriminator trained')
+    
     gen_total_loss, gen_gan_loss, gen_l1_loss = generator_loss(disc_generated_output, gen_output, target)
     disc_loss = discriminator_loss(disc_real_output, disc_generated_output)
 
@@ -161,8 +164,10 @@ def train_step(input_image, target, step,discriminator,generator_optimizer,discr
 
   generator_optimizer.apply_gradients(zip(generator_gradients,
                                           generator.trainable_variables))
+  print('Genarator weights updated')
   discriminator_optimizer.apply_gradients(zip(discriminator_gradients,
                                               discriminator.trainable_variables))
+  print('Discriminator weights updated')
 
 #   with summary_writer.as_default():
 #     tf.summary.scalar('gen_total_loss', gen_total_loss, step=step//1000)
@@ -195,18 +200,33 @@ def train_step(input_image, target, step,discriminator,generator_optimizer,discr
     # if (step + 1) % 5000 == 0:
     #   checkpoint.save(file_prefix=checkpoint_prefix)
       
-def fit(train_ds, epochs,discriminator,generator_optimizer,discriminator_optimizer):
+def fit(train_ds, epochs,discriminator,generator_optimizer,discriminator_optimizer,checkpoint,checkpoint_prefix):
   
   for epoch in range(epochs):
     start = time.time()
-    print("Epoch: ", epoch+1)
+    print("Epoch: ", epoch+1 , '/', epochs)
     # Train
     for n, (input_image, target) in train_ds.enumerate():
       train_step(input_image, target, epoch,discriminator,generator_optimizer,discriminator_optimizer)
     print()
     print ('Time taken for epoch {} is {} sec\n'.format(epoch + 1,time.time()-start))
+    if epoch%10 == 0:
+        checkpoint.save(file_prefix=checkpoint_prefix)
    
    
+def save_model(model,model_filename,bucket_name):
+    model_filename = 'model_trained.keras'
+    model_path = f'./saved_model/{model_filename}'
+    save_model(generator,model_path)
+    print("✅ Model saved to local")
+
+    client = storage.Client()
+    bucket = client.bucket(bucket_name)
+    blob = bucket.blob(f"models/{model_filename}")
+    blob.upload_from_filename(model_path)
+    print("✅ Model saved to GCS")
+    
+    
 def train(generator, train_ds, val_ds,epochs=10):
     
     es = EarlyStopping(patience=5, verbose=0, restore_best_weights=True)
