@@ -36,15 +36,15 @@ def zoom_on_cat_face(jpg_path, cat_path, image_size=64, data_augmentation=False)
         jpg_path = jpg_path.numpy().decode()
     if isinstance(cat_path, tf.Tensor):
         cat_path = cat_path.numpy().decode()
-    
+
     # --- Load image as PIL (safe in eager) ---
     with tf.io.gfile.GFile(jpg_path, "rb") as f:
         img_pil = Image.open(f).convert("RGB")
-        
+
     # --- Load .cat file as string ---
     with tf.io.gfile.GFile(cat_path, "r") as f:
         cat_cat = f.read()
-        
+
     # # --- Load image as PIL (safe in eager) ---
     # img_pil = Image.open(jpg_path).convert("RGB")
 
@@ -129,6 +129,7 @@ def rgb_to_lab_tf(rgb):
     adapte fonction rgb_to_lab a un tensor.
     """
     a = tf.numpy_function(func=rgb_to_lab, inp=[rgb], Tout=tf.float32)
+    print('\n ✅ RGB to LAB')
     return a
 
 
@@ -147,7 +148,6 @@ def path_to_array(jpg_path):
         jpg_path = jpg_path.numpy().decode()
     with tf.io.gfile.GFile(jpg_path, "rb") as f:
         img_pil = Image.open(f).convert("RGB")
-        
     return np.array(img_pil, dtype=np.uint8)
 
 def path_to_array_tf(jpg_path):
@@ -155,6 +155,7 @@ def path_to_array_tf(jpg_path):
     adapte la fonction zoom_on_cat_face a un tensor
     """
     a = tf.py_function(func=path_to_array, inp=[jpg_path], Tout=tf.uint8)
+    print('\n ✅ read the files, outputed the numpy arrays RGB')
     return a
 
 def preprocess(jpg_path):
@@ -177,7 +178,7 @@ def preprocess(jpg_path):
 
     L_norm = L / 50 - 1
     AB_norm = AB / 128
-
+    print(f'\n ✅ preporc done, L and AB normalised. Shape of L = {L_norm.shape}')
     return L_norm, AB_norm
 
 

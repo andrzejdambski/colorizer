@@ -25,14 +25,20 @@ l_jpg = [url+jpg for jpg in l_jpg]
 ds = tf.data.Dataset.from_tensor_slices((l_jpg))
 ds = ds.map(preprocess, num_parallel_calls=tf.data.AUTOTUNE).batch(32).prefetch(tf.data.AUTOTUNE)
 print(next(iter(ds)))
+print(f'\n ✅ mapable dataset created')
+
 
 split_ratio = 0.2
 test_len = int(len(ds)*split_ratio)
 test_ds = ds.take(test_len)
 train_ds = ds.skip(test_len)
+print(f'\n ✅ train test split done')
+
 
 image_size = 256
 generator = Generator(image_size)
+print(f'\n ✅ generator done')
+
 
 generator.compile(loss=mae,optimizer='adam')
 
