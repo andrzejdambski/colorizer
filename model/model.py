@@ -38,7 +38,7 @@ def upsample(filter,kernel_size,apply_dropout=False):
 
     return result
 
-def Generator(image_size=64):
+def Generator(image_size=256):
 
     inputs = Input(shape=(image_size,image_size,1))
 
@@ -105,12 +105,12 @@ def generator_loss(disc_generated_output, gen_output, target):
   return total_gen_loss, gan_loss, l1_loss
 
 
-def Discriminator():
+def Discriminator(image_size):
     
   initializer = tf.random_normal_initializer(0., 0.02)
 
-  inp = tf.keras.layers.Input(shape=[64, 64, 2], name='input_image')
-  tar = tf.keras.layers.Input(shape=[64, 64, 2], name='target_image')
+  inp = tf.keras.layers.Input(shape=[image_size, image_size, 1], name='input_image')
+  tar = tf.keras.layers.Input(shape=[image_size, image_size, 2], name='target_image')
 
   x = tf.keras.layers.concatenate([inp, tar])  # (batch_size, 256, 256, channels*2)
 
@@ -144,7 +144,7 @@ def discriminator_loss(disc_real_output, disc_generated_output):
   return total_disc_loss
 
 @tf.function
-def train_step(input_image, target, step):
+def train_step(input_image, target, step,discriminator,generator_optimizer,discriminator_optimizer):
   with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
     gen_output = generator(input_image, training=True)
 
@@ -164,46 +164,54 @@ def train_step(input_image, target, step):
   discriminator_optimizer.apply_gradients(zip(discriminator_gradients,
                                               discriminator.trainable_variables))
 
-  with summary_writer.as_default():
-    tf.summary.scalar('gen_total_loss', gen_total_loss, step=step//1000)
-    tf.summary.scalar('gen_gan_loss', gen_gan_loss, step=step//1000)
-    tf.summary.scalar('gen_l1_loss', gen_l1_loss, step=step//1000)
-    tf.summary.scalar('disc_loss', disc_loss, step=step//1000)
+#   with summary_writer.as_default():
+#     tf.summary.scalar('gen_total_loss', gen_total_loss, step=step//1000)
+#     tf.summary.scalar('gen_gan_loss', gen_gan_loss, step=step//1000)
+#     tf.summary.scalar('gen_l1_loss', gen_l1_loss, step=step//1000)
+#     tf.summary.scalar('disc_loss', disc_loss, step=step//1000)
     
-def fit(train_ds, test_ds, steps):
+# def fit(train_ds, test_ds, steps):
     
-  example_input, example_target = next(iter(test_ds.take(1)))
-  start = time.time()
+#   example_input, example_target = next(iter(test_ds.take(1)))
+#   start = time.time()
 
-  for step, (input_image, target) in train_ds.repeat().take(steps).enumerate():
-    if (step) % 1000 == 0:
-      display.clear_output(wait=True)
+#   for step, (input_image, target) in train_ds.repeat().take(steps).enumerate():
+#     if (step) % 1000 == 0:
+#       display.clear_output(wait=True)
 
-      if step != 0:
-        print(f'Time taken for 1000 steps: {time.time()-start:.2f} sec\n')
+#       if step != 0:
+#         print(f'Time taken for 1000 steps: {time.time()-start:.2f} sec\n')
 
-      start = time.time()
-
-    #   generate_images(generator, example_input, example_target)
-      print(f"Step: {step//1000}k")
-
-    train_step(input_image, target, step)
-
-    # Training step
-    if (step+1) % 10 == 0:
-      print('.', end='', flush=True)
+#       start = time.time()
 
 
-    # Save (checkpoint) the model every 5k steps
-    if (step + 1) % 5000 == 0:
-      checkpoint.save(file_prefix=checkpoint_prefix)
+
+    # train_step(input_image, target, step)
+
+
+
+
+    # # Save (checkpoint) the model every 5k steps
+    # if (step + 1) % 5000 == 0:
+    #   checkpoint.save(file_prefix=checkpoint_prefix)
       
-
-def train(generator, train_ds, val_ds):
+def fit(train_ds, epochs,discriminator,generator_optimizer,discriminator_optimizer):
+  
+  for epoch in range(epochs):
+    start = time.time()
+    print("Epoch: ", epoch+1)
+    # Train
+    for n, (input_image, target) in train_ds.enumerate():
+      train_step(input_image, target, epoch,discriminator,generator_optimizer,discriminator_optimizer)
+    print()
+    print ('Time taken for epoch {} is {} sec\n'.format(epoch + 1,time.time()-start))
+   
+   
+def train(generator, train_ds, val_ds,epochs=10):
     
     es = EarlyStopping(patience=5, verbose=0, restore_best_weights=True)
     chk = ModelCheckpoint(filepath = './checkpoints/checkpoint.model.keras',monitor='val_loss',\
         save_best_only=True,mode='min')
-    history = generator.fit(train_ds, epochs=10,verbose=1,callbacks=[chk], validation_data=val_ds)
+    history = generator.fit(train_ds, epochs=epochs,verbose=1,callbacks=[chk], validation_data=val_ds)
     
     return history
