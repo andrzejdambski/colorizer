@@ -139,8 +139,25 @@ def zoom_on_cat_face_tf(jpg_path, cat_path):
     a = tf.py_function(func=zoom_on_cat_face, inp=[jpg_path, cat_path], Tout=tf.uint8)
     return a
 
+def path_to_array(jpg_path):
+    """
+    transforme la photo zoomée en np.array
+    """
+    if isinstance(jpg_path, tf.Tensor):
+        jpg_path = jpg_path.numpy().decode()
+    with tf.io.gfile.GFile(jpg_path, "rb") as f:
+        img_pil = Image.open(f).convert("RGB")
+        
+    return np.array(img_pil, dtype=np.uint8)
 
-def preprocess(jpg_path, cat_path):
+def path_to_array_tf(jpg_path):
+    """
+    adapte la fonction zoom_on_cat_face a un tensor
+    """
+    a = tf.py_function(func=path_to_array, inp=[jpg_path], Tout=tf.uint8)
+    return a
+
+def preprocess(jpg_path):
     """
     depuis un path, zoom sur la tete du chat
     Change le format au LAB
@@ -149,11 +166,11 @@ def preprocess(jpg_path, cat_path):
     Normalise le L et le AB
     Retourne le L et le AB
     """
-    img_np = zoom_on_cat_face_tf(jpg_path, cat_path)
-
+    # img_np = zoom_on_cat_face_tf(jpg_path, cat_path)
+    img_np = path_to_array_tf(jpg_path)
     img_lab = rgb_to_lab_tf(img_np)
 
-    img_lab.set_shape((64, 64, 3))
+    img_lab.set_shape((256, 256, 3))
 
     L = img_lab[..., 0]
     AB = img_lab[..., 1:]
