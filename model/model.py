@@ -475,10 +475,13 @@ def pred_and_show(trained_model_path,jpg_path):
     
     plt.figure(figsize=(10,10))
     plt.subplot(1,3,1)
+    plt.title('Image réelle')
     plt.imshow(test_image_RGB_real)
     plt.subplot(1,3,2)
+    plt.title('Image noir et blanc')
     plt.imshow(test_image_BW)
     plt.subplot(1,3,3)
+    plt.title('Image colorisée')
     plt.imshow(test_image_RGB)
     
     
