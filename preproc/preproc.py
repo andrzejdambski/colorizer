@@ -238,3 +238,11 @@ def get_train_test_datasets(batch_number, path_to_data, test_ratio=0.2, seed=42)
     )
 
     return train_ds, test_ds
+
+def crop_and_resize(jpg_path,image_size=256):
+    
+    img_pil = Image.open(jpg_path)
+    img_pil = img_pil.resize((image_size, image_size))
+    img_pil.save(jpg_path+'_256.jpg')
+    # img_pil = img_pil.crop((0,0,256,256))
+    return jpg_path+'_256.jpg'
