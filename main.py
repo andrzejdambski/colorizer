@@ -1,61 +1,91 @@
-import tensorflow as tf
-import numpy as np
-import matplotlib.pyplot as plt
-from skimage import color
 import os
+import tensorflow as tf
 import datetime
-import requests
-from preproc.api import getting_file_names
-from preproc.preproc import get_dataset, get_list_of_paths, preprocess
-import time
-from keras import Sequential,Input,layers
-from keras.callbacks import EarlyStopping
-from model.model import Generator, Discriminator, mae, generator_loss, train, train_step, fit, save_model
-import math
-from keras.models import save_model, load_model
-from google.cloud import storage
 
-# os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 
-# "/Users/andrzej/.config/gcloud/application_default_credentials.json"
+from preproc.preproc import get_list_of_paths, preprocess
+from model.model import Generator, Discriminator, mae, fit, save_model
 
-# url = 'gs://colorizer/'
-# url = 'gs://catsdata/'
-BUCKET_NAME = 'catsdata'
-url = './raw_data/catsdata/'
 
-l_jpg = getting_file_names()
-# l_cat = getting_file_names('cat')
+tf.config.set_visible_devices([], 'GPU')
+print("Devices visibles :", tf.config.list_physical_devices())
 
-l_jpg = [url+jpg for jpg in l_jpg]
-# l_cat = [url+cat for cat in l_cat]
+# -----------------------------
+# Paramètres
+# -----------------------------
+DATA_DIR = "./raw_data/catsdata"
+BATCH_SIZE = 32
+IMAGE_SIZE = 256
+EPOCHS = 20  # augmenter à 10, 20… si besoins
 
-ds = tf.data.Dataset.from_tensor_slices((l_jpg))
-ds = ds.map(preprocess, num_parallel_calls=tf.data.AUTOTUNE).batch(32).prefetch(tf.data.AUTOTUNE)
-print(next(iter(ds)))
-print(f'\n ✅ mapable dataset created')
+# -----------------------------
+# Dataset
+# -----------------------------
+jpg_paths, _ = get_list_of_paths(DATA_DIR)
+print(f"🖼️  {len(jpg_paths)} images trouvées dans {DATA_DIR}")
 
+ds = tf.data.Dataset.from_tensor_slices(jpg_paths)
+ds = ds.map(preprocess, num_parallel_calls=tf.data.AUTOTUNE)
+ds = ds.batch(BATCH_SIZE).prefetch(tf.data.AUTOTUNE)
+print("✅ Dataset prêt (LAB normalisé 256×256)")
 
 split_ratio = 0.2
-test_len = int(len(ds)*split_ratio)
+test_len = int(len(ds) * split_ratio)
 test_ds = ds.take(test_len)
 train_ds = ds.skip(test_len)
-print(f'\n ✅ train test split done')
+print(f"✅ Split train/test fait (≈ {int((1-split_ratio)*100)}% / {int(split_ratio*100)}%)")
 
-
-image_size = 256
-generator = Generator(image_size)
-print(f'\n ✅ generator done')
-
-generator.compile(loss=mae,optimizer='adam')
+# -----------------------------
+# Modèles + optimizers
+# -----------------------------
+generator = Generator(IMAGE_SIZE)
+generator.compile(loss=mae, optimizer="adam")
+print("✅ Generator créé")
 
 generator_optimizer = tf.keras.optimizers.Adam(2e-4, beta_1=0.5)
 discriminator_optimizer = tf.keras.optimizers.Adam(2e-4, beta_1=0.5)
 
-discriminator = Discriminator(image_size=image_size)
-print(f'\n ✅ discriminator done')
+discriminator = Discriminator(image_size=IMAGE_SIZE)
+print("✅ Discriminator créé")
 
-checkpoint_dir = './training_checkpoints'
+checkpoint_dir = "./training_checkpoints"
+os.makedirs(checkpoint_dir, exist_ok=True)
 checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
+
+checkpoint = tf.train.Checkpoint(
+    generator_optimizer=generator_optimizer,
+    discriminator_optimizer=discriminator_optimizer,
+    generator=generator,
+    discriminator=discriminator,
+)
+
+# -----------------------------
+# TensorBoard log dir + batch de samples
+# -----------------------------
+log_dir = f"logs/gan_{datetime.datetime.now().strftime('%Y%m%d-%H%M%S')}"
+sample_batch = next(iter(test_ds))  # (L_batch, AB_batch)
+
+# -----------------------------
+# Entraînement GAN
+# -----------------------------
+
+fit(
+    train_ds,
+    EPOCHS,
+    generator,
+    discriminator,
+    generator_optimizer,
+    discriminator_optimizer,
+    checkpoint,
+    checkpoint_prefix,
+    log_dir=log_dir,
+    sample_batch=sample_batch,
+)
+
+# -----------------------------
+# Sauvegarde du modèle pour l'API FastAPI
+# -----------------------------
+MODEL_PATH = "model_trained.keras"
+save_model(generator, MODEL_PATH, bucket_name=None)  # local uniquement
 checkpoint = tf.train.Checkpoint(generator_optimizer=generator_optimizer,
                                  discriminator_optimizer=discriminator_optimizer,
                                  generator=generator,

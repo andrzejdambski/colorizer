@@ -140,14 +140,28 @@ def zoom_on_cat_face_tf(jpg_path, cat_path):
     a = tf.py_function(func=zoom_on_cat_face, inp=[jpg_path, cat_path], Tout=tf.uint8)
     return a
 
-def path_to_array(jpg_path):
+# def path_to_array(jpg_path):
+#     """
+#     transforme la photo zoomée en np.array
+#     """
+#     if isinstance(jpg_path, tf.Tensor):
+#         jpg_path = jpg_path.numpy().decode()
+#     with tf.io.gfile.GFile(jpg_path, "rb") as f:
+#         img_pil = Image.open(f).convert("RGB")
+#     return np.array(img_pil, dtype=np.uint8)
+
+def path_to_array(jpg_path, image_size=256):
     """
-    transforme la photo zoomée en np.array
+    Charge une image RGB depuis son chemin, la redimensionne en (image_size, image_size)
+    et la renvoie en np.array uint8 de shape (image_size, image_size, 3).
     """
     if isinstance(jpg_path, tf.Tensor):
         jpg_path = jpg_path.numpy().decode()
+
     with tf.io.gfile.GFile(jpg_path, "rb") as f:
         img_pil = Image.open(f).convert("RGB")
+        img_pil = img_pil.resize((image_size, image_size))
+
     return np.array(img_pil, dtype=np.uint8)
 
 def path_to_array_tf(jpg_path):
