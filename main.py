@@ -86,3 +86,20 @@ fit(
 # -----------------------------
 MODEL_PATH = "model_trained.keras"
 save_model(generator, MODEL_PATH, bucket_name=None)  # local uniquement
+checkpoint = tf.train.Checkpoint(generator_optimizer=generator_optimizer,
+                                 discriminator_optimizer=discriminator_optimizer,
+                                 generator=generator,
+                                 discriminator=discriminator)
+
+epochs = 10
+fit(train_ds,epochs,discriminator,generator_optimizer,discriminator_optimizer,checkpoint,checkpoint_prefix)
+
+model_filename = 'model_trained.keras'    
+save_model(generator,model_filename,BUCKET_NAME)
+# # history = train(generator,train_ds,test_ds,epochs=epochs)
+
+# save_dir = '/opt/colorizer/'
+# save_dir_1 = '/model_trained/'
+# path = os.path.join(save_dir_1, f"model_final.keras")
+# history.save(path)
+# print(f"✅ Modèle sauvegardé : {path}")
