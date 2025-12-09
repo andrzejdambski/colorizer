@@ -11,6 +11,9 @@ import tensorflow as tf
 from keras import Sequential, Input, layers
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 from google.cloud import storage
+from keras.models import load_model
+from preproc.preproc import preprocess
+import matplotlib.pyplot as plt
 
 
 # -----------------------------------------------------------------------------
@@ -443,7 +446,42 @@ def save_model(model, model_filename="model_trained.keras", bucket_name=None):
             f"✅ Model uploaded to GCS bucket '{bucket_name}' as '{blob.name}'"
         )
 
+# -----------------------------------------------------------------------------
+#  Colorisation et affichage d'une image à partir d'un model entrainé
+#  et affichage de l'image réelle et de l'image en noir et blanc
+# -----------------------------------------------------------------------------
+def pred_and_show(trained_model_path,jpg_path):
+    
+    def mae(gen_output, target):
+        return tf.reduce_mean(tf.abs(gen_output - target))
 
+    model = load_model(trained_model_path,custom_objects={"mae": mae})
+
+    im = jpg_path
+
+    test_image_L_norm, test_image_AB_norm = preprocess(im)
+    test_image_L_expanded_norm = test_image_L_norm[None,...,None]
+    test_image_AB_pred_norm = model(test_image_L_expanded_norm, training=False)
+    test_image_AB_pred = test_image_AB_pred_norm*128
+    test_image_AB = test_image_AB_norm*128
+    test_image_AB_expanded = test_image_AB[None,...]
+    test_image_L = (test_image_L_expanded_norm + 1)*50
+    test_image_LAB = tf.concat([test_image_L[0],test_image_AB_pred[0]], axis=-1)
+    test_image_LAB_real = tf.concat([test_image_L[0],test_image_AB_expanded[0]], axis=-1)
+    test_image_RGB = color.lab2rgb(test_image_LAB)
+    test_image_RGB_real = color.lab2rgb(test_image_LAB_real)
+    test_image_BW = tf.concat([test_image_L[0],test_image_L[0],test_image_L[0]],axis=-1)
+    test_image_BW = test_image_BW/100
+    
+    plt.figure(figsize=(10,10))
+    plt.subplot(1,3,1)
+    plt.imshow(test_image_RGB_real)
+    plt.subplot(1,3,2)
+    plt.imshow(test_image_BW)
+    plt.subplot(1,3,3)
+    plt.imshow(test_image_RGB)
+    
+    
 # -----------------------------------------------------------------------------
 #  Entraînement "classique" Keras (non GAN) – laissé pour info
 # -----------------------------------------------------------------------------
