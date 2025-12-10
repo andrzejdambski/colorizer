@@ -5,15 +5,18 @@ import numpy as np
 from PIL import Image
 import io
 import tensorflow as tf
-
 from skimage import color
+
+import matplotlib
+matplotlib.use("Agg")          # backend non interactif pour serveur
+import matplotlib.pyplot as plt
 
 # --- IMPORTS PROJET ---
 from preproc.LAB import rgb_to_lab, extraire_L_et_A_B
 from preproc.Normalisation_tf import normalize_L_AB, denormalize_L_AB_np
 
 # --- CHARGEMENT DU GÉNÉRATEUR ---
-GENERATOR_PATH = "model_trained.keras"  # toujours vérifier que c'est le bon fichier !!!!!!!!!!!!!
+GENERATOR_PATH = "model_trained_colab.keras"  # toujours vérifier que c'est le bon model entrainé !!!!!!!!!!!!!
 generator = tf.keras.models.load_model(GENERATOR_PATH, compile=False)
 
 app = FastAPI(title="Colorizer API", version="1.0.0")
@@ -61,58 +64,99 @@ def preprocess_image_for_model(img_pil: Image.Image) -> np.ndarray:
 # ---------------------------------------------------------
 def postprocess_ab_to_rgb(L_input: np.ndarray, AB_pred: np.ndarray) -> Image.Image:
     """
-    Reconstruit une image RGB à partir de :
-      - L_input : (1, H, W, 1)   normalisé dans [-1, 1]
-      - AB_pred : (1, H, W, 2)   normalisé dans [-1, 1]
-    Retourne : image PIL RGB (H, W)
+    Version API alignée avec test_model_output.py → couleurs plus belles.
     """
-    # enlever la dimension batch
-    L = L_input[0, :, :, 0]      # (H, W)
-    AB = AB_pred[0, :, :, :]     # (H, W, 2)
+    # --- Paramètre de saturation (même que dans le script test) ---
+    SAT_FACTOR = 1.25  # On peut monter à 1.3 si tu veux encore plus de couleur
 
-    # dénormalisation L ∈ [0, 100]
+    # enlever batch
+    L = L_input[0, :, :, 0]             # (256,256)
+    AB = AB_pred[0]                     # (256,256,2)
+
+    # 🔥 boost de saturation
+    AB = np.clip(AB * SAT_FACTOR, -1.0, 1.0)
+
+    # dénormalisation L → [0,100]
     L_rescaled = (L + 1.0) * 50.0
 
-    # dénormalisation AB ∈ [-128, 128]
+    # dénormalisation AB → [-128,128]
     AB_rescaled = AB * 128.0
 
-    # recomposer LAB (H, W, 3)
-    lab_stack = np.stack(
-        [L_rescaled, AB_rescaled[:, :, 0], AB_rescaled[:, :, 1]],
-        axis=-1
-    )
+    # reconstruction LAB
+    lab = np.zeros((256,256,3), dtype=np.float32)
+    lab[:,:,0] = L_rescaled
+    lab[:,:,1] = AB_rescaled[:,:,0]
+    lab[:,:,2] = AB_rescaled[:,:,1]
 
-    # LAB → RGB dans [0, 1]
-    rgb = color.lab2rgb(lab_stack)
+    # LAB → RGB float [0,1]
+    rgb = color.lab2rgb(lab)
 
-    # Passage en uint8 [0, 255]
-    rgb = np.clip(rgb * 255.0, 0, 255).astype("uint8")
+    # conversion en uint8
+    rgb = (np.clip(rgb, 0, 1) * 255).astype("uint8")
 
     return Image.fromarray(rgb)
 
 # ---------------------------------------------------------
-#   ENDPOINT PRINCIPAL : /colorize
+#   ENDPOINT : /colorize_montage  → seule image GAN
 # ---------------------------------------------------------
-@app.post("/colorize", response_class=Response)
-async def colorize_image(file: UploadFile = File(...)):
+@app.post("/colorize_montage", response_class=Response)
+async def colorize_montage(file: UploadFile = File(...)):
     """
-    Envoie une image (RGB ou N&B),
-    Retourne l'image colorisée (PNG).
+    Retourne uniquement l'image colorisée par le GAN (PNG 256x256)
     """
-    # lire image
+
+    # 1) lire l’image uploadée
     content = await file.read()
     img_pil = Image.open(io.BytesIO(content)).convert("RGB")
 
-    # preprocess L
-    L_input = preprocess_image_for_model(img_pil)
+    # 2) préprocess : L normalisé comme au training
+    L_input = preprocess_image_for_model(img_pil)   # (1,256,256,1)
 
-    # prédiction AB
+    # 3) prédiction GAN
     AB_pred = generator.predict(L_input)
 
-    # reconstruction RGB
-    img_out = postprocess_ab_to_rgb(L_input, AB_pred)
+    # 4) reconstruction couleur (même postprocess que ton script de test)
+    img_colorized = postprocess_ab_to_rgb(L_input, AB_pred)  # PIL Image 256x256
 
-    # conversion en bytes
+    # 5) retour en PNG
     buf = io.BytesIO()
-    img_out.save(buf, format="PNG")
+    img_colorized.save(buf, format="PNG")
     return Response(buf.getvalue(), media_type="image/png")
+
+# ----------------------------------------------------------------------------------------------------
+#   ENDPOINT DEBUG : /colorize_montage_debug → triple image uniquement pour nous et pas l'utilisateur
+# ----------------------------------------------------------------------------------------------------
+@app.post("/colorize_montage_debug", response_class=Response)
+async def colorize_montage_debug(file: UploadFile = File(...)):
+    """
+    [DEBUG] Retourne un montage :
+        [ Entrée L | Sortie GAN | Originale ]
+    """
+
+    content = await file.read()
+    img_pil = Image.open(io.BytesIO(content)).convert("RGB")
+    original_256 = img_pil.resize((256, 256))
+
+    L_input = preprocess_image_for_model(img_pil)   # (1,256,256,1)
+    AB_pred = generator.predict(L_input)
+    img_colorized = postprocess_ab_to_rgb(L_input, AB_pred)
+
+    # reconstruire L pour affichage N&B
+    L = L_input[0, :, :, 0]
+    L_rescaled = (L + 1.0) * 50.0
+    lab = np.zeros((256, 256, 3), dtype=np.float32)
+    lab[:, :, 0] = L_rescaled
+    L_rgb = color.lab2rgb(lab)
+    L_rgb = (np.clip(L_rgb, 0, 1) * 255).astype("uint8")
+    img_L = Image.fromarray(L_rgb)
+
+    # montage horizontal
+    montage = Image.new("RGB", (256 * 3, 256))
+    montage.paste(img_L, (0, 0))
+    montage.paste(img_colorized, (256, 0))
+    montage.paste(original_256, (512, 0))
+
+    buf = io.BytesIO()
+    montage.save(buf, format="PNG")
+    return Response(buf.getvalue(), media_type="image/png")
+
