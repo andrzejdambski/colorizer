@@ -239,10 +239,48 @@ def get_train_test_datasets(batch_number, path_to_data, test_ratio=0.2, seed=42)
 
     return train_ds, test_ds
 
-def crop_and_resize(jpg_path,image_size=256):
+def resize_square_image(jpg_path,image_size=256):
+    '''Resizes a square image to 256x256 and saves a .jpg'''
     
     img_pil = Image.open(jpg_path)
     img_pil = img_pil.resize((image_size, image_size))
     img_pil.save(jpg_path+'_256.jpg')
     # img_pil = img_pil.crop((0,0,256,256))
     return jpg_path+'_256.jpg'
+
+def crop_and_resize_to_square(jpg_path,image_size=256):
+    '''Crops and resizes an image to a square format and saves it as a .jpg'''
+    
+    img_pil = Image.open(jpg_path)
+    if img_pil.size[0] > img_pil.size[1]:
+        crop_x_l = (img_pil.size[0] - img_pil.size[1]) / 2
+        crop_x_r = img_pil.size[0] - crop_x_l
+        img_pil = img_pil.crop((crop_x_l,0,crop_x_r,img_pil.size[1]))
+    
+    elif img_pil.size[0] < img_pil.size[1]:
+        crop_y_t = (img_pil.size[1] - img_pil.size[0]) / 2
+        crop_y_b = img_pil.size[1] - crop_y_t   
+        img_pil = img_pil.crop((0,crop_y_t,img_pil.size[0],crop_y_b))
+    
+    img_pil = img_pil.resize((image_size,image_size))
+    # img_pil.save(jpg_path+f'_{image_size}.jpg')
+    # plt.imshow(img_pil)
+    
+    # return jpg_path+'_256.jpg'
+    return img_pil
+    
+
+# def jpg_cropped_to_lab_npz(path_to_jpgs):
+#     '''Takes the zoomed and centered images (jpg) as input, 
+#     converts RGB to LAB and saves each file to a .npz file'''
+    
+#     paths = get_list_of_paths(path_to_jpgs)
+#     filenames = [path[18:-4] for path in paths[0]]
+#     for path,filename in list(zip(paths[0],filenames)):
+#         L_norm, AB_norm = preprocess(path)
+#         tensor = tf.concat([L_norm[...,None], AB_norm],axis=-1)
+#         np.savez(f'npz/{filename}',tensor)
+
+def load_as_tensor(jpg_path):
+    
+    return tf.io.read_file(jpg_path)[0], tf.io.read_file(jpg_path)[1:] 
