@@ -248,7 +248,7 @@ def resize_square_image(jpg_path,image_size=256):
     # img_pil = img_pil.crop((0,0,256,256))
     return jpg_path+'_256.jpg'
 
-def crop_and_resize_to_square(jpg_path,image_size=256):
+def crop_and_resize_to_square(jpg_path,image_size=256,save=False):
     '''Crops and resizes an image to a square format and saves it as a .jpg'''
     
     img_pil = Image.open(jpg_path)
@@ -263,10 +263,10 @@ def crop_and_resize_to_square(jpg_path,image_size=256):
         img_pil = img_pil.crop((0,crop_y_t,img_pil.size[0],crop_y_b))
     
     img_pil = img_pil.resize((image_size,image_size))
-    # img_pil.save(jpg_path+f'_{image_size}.jpg')
-    # plt.imshow(img_pil)
+    if save==True:
+        img_pil.convert('RGB').save(jpg_path+f'_{image_size}.jpg')
+        return img_pil
     
-    # return jpg_path+'_256.jpg'
     return img_pil
     
 
