@@ -2,7 +2,7 @@ import os
 import tensorflow as tf
 import datetime
 
-from preproc.preproc import get_list_of_paths, preprocess
+from preproc.preproc import get_list_of_paths, preprocess, load_as_tensor
 from model.model import Generator, Discriminator, mae, fit, save_model
 
 
@@ -12,7 +12,7 @@ print("Devices visibles :", tf.config.list_physical_devices())
 # -----------------------------
 # Paramètres
 # -----------------------------
-DATA_DIR = "./raw_data/catsdata"
+DATA_DIR = "/npz"
 BATCH_SIZE = 32
 IMAGE_SIZE = 256
 EPOCHS = 20  # augmenter à 10, 20… si besoins
@@ -24,7 +24,7 @@ jpg_paths, _ = get_list_of_paths(DATA_DIR)
 print(f"🖼️  {len(jpg_paths)} images trouvées dans {DATA_DIR}")
 
 ds = tf.data.Dataset.from_tensor_slices(jpg_paths)
-ds = ds.map(preprocess, num_parallel_calls=tf.data.AUTOTUNE)
+ds = ds.map(load_as_tensor, num_parallel_calls=tf.data.AUTOTUNE)
 ds = ds.batch(BATCH_SIZE).prefetch(tf.data.AUTOTUNE)
 print("✅ Dataset prêt (LAB normalisé 256×256)")
 
